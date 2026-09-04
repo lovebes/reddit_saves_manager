@@ -258,7 +258,7 @@ defmodule RedditSavesManager.SavesTest do
 
   test "upsert_saved_post/1 updates on duplicate reddit_fullname" do
     {:ok, _} = Saves.upsert_saved_post(@valid_attrs)
-    {:ok, updated} = Saves.upsert_saved_post(%{@valid_attrs | score: 42})
+    {:ok, updated} = Saves.upsert_saved_post(Map.put(@valid_attrs, :score, 42))
     assert updated.score == 42
     assert Saves.list_active_posts() |> length() == 1
   end
@@ -590,8 +590,20 @@ Append to `test/reddit_saves_manager/saves_test.exs`:
 
 ```elixir
   test "search_posts/1 finds posts by title and body text" do
-    {:ok, _} = Saves.upsert_saved_post(%{@valid_attrs | title: "GenServer timeout tuning", selftext: "discussion of :hibernate"})
-    {:ok, _} = Saves.upsert_saved_post(%{@valid_attrs | reddit_fullname: "t3_zzz999", title: "Photo booth build", selftext: "DNP printer notes"})
+    {:ok, _} =
+      Saves.upsert_saved_post(
+        @valid_attrs
+        |> Map.put(:title, "GenServer timeout tuning")
+        |> Map.put(:selftext, "discussion of :hibernate")
+      )
+
+    {:ok, _} =
+      Saves.upsert_saved_post(
+        @valid_attrs
+        |> Map.put(:reddit_fullname, "t3_zzz999")
+        |> Map.put(:title, "Photo booth build")
+        |> Map.put(:selftext, "DNP printer notes")
+      )
 
     assert [found] = Saves.search_posts("GenServer")
     assert found.title == "GenServer timeout tuning"
