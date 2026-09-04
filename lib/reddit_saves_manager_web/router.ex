@@ -18,6 +18,9 @@ defmodule RedditSavesManagerWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+
+    get "/auth/reddit", AuthController, :new
+    get "/auth/reddit/callback", AuthController, :callback
   end
 
   # Other scopes may use custom stacks.
