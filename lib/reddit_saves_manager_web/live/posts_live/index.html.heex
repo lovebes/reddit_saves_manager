@@ -1,0 +1,23 @@
+<h1>Saved Posts</h1>
+
+<button phx-click="sync">Sync now</button>
+
+<.form for={%{}} as={:filters} id="filters-form" phx-submit="filter">
+  <input type="text" name="filters[subreddit]" placeholder="subreddit" value={@filters[:subreddit]} />
+  <input type="text" name="filters[type]" placeholder="type (link/comment)" value={@filters[:type]} />
+  <input type="text" name="filters[tag]" placeholder="tag" value={@filters[:tag]} />
+  <button type="submit">Filter</button>
+</.form>
+
+<ul>
+  <li :for={post <- @posts}>
+    <input
+      type="checkbox"
+      checked={MapSet.member?(@selected_ids, post.id)}
+      phx-click="toggle_select"
+      phx-value-id={post.id}
+    />
+    <.link navigate={~p"/posts/#{post.id}"}><%= post.title %></.link>
+    (<%= post.subreddit %>)
+  </li>
+</ul>
