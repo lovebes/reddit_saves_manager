@@ -774,7 +774,7 @@ defmodule RedditSavesManager.Reddit.Client do
   @token_endpoint "https://www.reddit.com/api/v1/access_token"
   @api_base "https://oauth.reddit.com"
 
-  defp config, do: Application.fetch_env!(:reddit_saves_manager, :reddit)
+  defp config, do: Application.fetch_env!(:reddit_saves_manager, :reddit) |> Map.new()
   defp req_options, do: Application.get_env(:reddit_saves_manager, :reddit_req_options, [])
 
   def authorize_url(state) do
@@ -852,8 +852,8 @@ defmodule RedditSavesManager.Reddit.Client do
       )
 
     case result do
-      {:ok, %{status: 200, body: %{"data" => %{"children" => children, "after" => after}}}} ->
-        {:ok, %{children: Enum.map(children, & &1["data"]), after: after}}
+      {:ok, %{status: 200, body: %{"data" => %{"children" => children, "after" => next_cursor}}}} ->
+        {:ok, %{children: Enum.map(children, & &1["data"]), after: next_cursor}}
 
       {:ok, %{status: status, body: body}} ->
         {:error, {:unexpected_status, status, body}}
@@ -1819,7 +1819,7 @@ Expected: FAIL — `OpenRouterClient` undefined.
 defmodule RedditSavesManager.Research.OpenRouterClient do
   @endpoint "https://openrouter.ai/api/v1/chat/completions"
 
-  defp config, do: Application.fetch_env!(:reddit_saves_manager, :open_router)
+  defp config, do: Application.fetch_env!(:reddit_saves_manager, :open_router) |> Map.new()
   defp req_options, do: Application.get_env(:reddit_saves_manager, :open_router_req_options, [])
 
   def model, do: config()[:model]
