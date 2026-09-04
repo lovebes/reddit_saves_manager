@@ -56,4 +56,24 @@ defmodule RedditSavesManager.SavesTest do
     assert [found] = Saves.list_active_posts(%{tag: "research"})
     assert found.id == post1.id
   end
+
+  test "search_posts/1 finds posts by title and body text" do
+    {:ok, _} =
+      Saves.upsert_saved_post(
+        @valid_attrs
+        |> Map.put(:title, "GenServer timeout tuning")
+        |> Map.put(:selftext, "discussion of :hibernate")
+      )
+
+    {:ok, _} =
+      Saves.upsert_saved_post(
+        @valid_attrs
+        |> Map.put(:reddit_fullname, "t3_zzz999")
+        |> Map.put(:title, "Photo booth build")
+        |> Map.put(:selftext, "DNP printer notes")
+      )
+
+    assert [found] = Saves.search_posts("GenServer")
+    assert found.title == "GenServer timeout tuning"
+  end
 end

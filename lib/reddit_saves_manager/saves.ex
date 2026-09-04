@@ -82,4 +82,24 @@ defmodule RedditSavesManager.Saves do
     |> where([t, pt], pt.saved_post_id == ^saved_post_id)
     |> Repo.all()
   end
+
+  def search_posts(query_text) when is_binary(query_text) and query_text != "" do
+    sql = """
+    SELECT saved_posts.* FROM saved_posts
+    JOIN saved_posts_fts ON saved_posts_fts.rowid = saved_posts.id
+    WHERE saved_posts_fts MATCH ? AND saved_posts.archived_at IS NULL
+    ORDER BY rank
+    """
+
+    {:ok, %{rows: rows, columns: columns}} = Repo.query(sql, [query_text])
+
+    Enum.map(rows, fn row ->
+      columns
+      |> Enum.zip(row)
+      |> Map.new()
+      |> then(&Repo.load(SavedPost, &1))
+    end)
+  end
+
+  def search_posts(_), do: []
 end
