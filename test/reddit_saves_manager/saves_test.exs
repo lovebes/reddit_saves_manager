@@ -5,6 +5,7 @@ defmodule RedditSavesManager.SavesTest do
   use RedditSavesManager.DataCase, async: false
 
   alias RedditSavesManager.Saves
+  alias RedditSavesManager.Repo
 
   @valid_attrs %{
     reddit_fullname: "t3_abc123",
@@ -31,5 +32,28 @@ defmodule RedditSavesManager.SavesTest do
     {:ok, post} = Saves.upsert_saved_post(@valid_attrs)
     {:ok, _} = Saves.archive_posts([post.id])
     assert Saves.list_active_posts() == []
+  end
+
+  test "tag_post/2 creates the tag if missing and links it" do
+    {:ok, post} = Saves.upsert_saved_post(@valid_attrs)
+    assert {:ok, _} = Saves.tag_post(post.id, "research")
+    assert [%{name: "research"}] = Saves.list_tags_for_post(post.id)
+  end
+
+  test "tag_post/2 reuses an existing tag" do
+    {:ok, post1} = Saves.upsert_saved_post(@valid_attrs)
+    {:ok, post2} = Saves.upsert_saved_post(%{@valid_attrs | reddit_fullname: "t3_def456"})
+    {:ok, _} = Saves.tag_post(post1.id, "research")
+    {:ok, _} = Saves.tag_post(post2.id, "research")
+    assert Repo.aggregate(RedditSavesManager.Saves.Tag, :count) == 1
+  end
+
+  test "list_active_posts/1 filters by tag" do
+    {:ok, post1} = Saves.upsert_saved_post(@valid_attrs)
+    {:ok, _post2} = Saves.upsert_saved_post(%{@valid_attrs | reddit_fullname: "t3_def456"})
+    {:ok, _} = Saves.tag_post(post1.id, "research")
+
+    assert [found] = Saves.list_active_posts(%{tag: "research"})
+    assert found.id == post1.id
   end
 end
