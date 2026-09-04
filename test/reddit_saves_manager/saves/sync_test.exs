@@ -41,4 +41,17 @@ defmodule RedditSavesManager.Saves.SyncTest do
     assert {:ok, %{synced: 2}} = Sync.run("atok", "sjkim")
     assert length(Saves.list_active_posts()) == 2
   end
+
+  test "run/2 returns error when Reddit API fails" do
+    Req.Test.stub(Client, fn conn ->
+      # Simulate a non-200 status (e.g., 401 Unauthorized)
+      conn
+      |> Plug.Conn.send_resp(401, "{\"error\": \"Unauthorized\"}")
+    end)
+
+    result = Sync.run("invalid_token", "sjkim")
+    assert {:error, _reason} = result
+    # Ensure we didn't create partial records
+    assert length(Saves.list_active_posts()) == 0
+  end
 end

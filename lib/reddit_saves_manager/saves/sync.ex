@@ -3,8 +3,10 @@ defmodule RedditSavesManager.Saves.Sync do
   alias RedditSavesManager.Saves
 
   def run(access_token, username) do
-    synced = fetch_all(access_token, username, nil, 0)
-    {:ok, %{synced: synced}}
+    case fetch_all(access_token, username, nil, 0) do
+      {:error, _reason} = error -> error
+      synced when is_integer(synced) -> {:ok, %{synced: synced}}
+    end
   end
 
   defp fetch_all(access_token, username, after_cursor, acc) do
