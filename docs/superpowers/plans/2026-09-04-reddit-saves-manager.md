@@ -1085,6 +1085,8 @@ defmodule RedditSavesManager.Saves.SyncTest do
 
   test "run/2 paginates through all saved posts and upserts them" do
     Req.Test.stub(Client, fn conn ->
+      conn = Plug.Conn.fetch_query_params(conn)
+
       case conn.params["after"] do
         nil ->
           Req.Test.json(conn, %{
@@ -1511,7 +1513,7 @@ Append to `test/reddit_saves_manager/saves_test.exs`:
     {:ok, post2} = Saves.upsert_saved_post(%{@valid_attrs | reddit_fullname: "t3_fail"})
 
     Req.Test.stub(RedditSavesManager.Reddit.Client, fn conn ->
-      %{"id" => id} = conn.body_params
+      %{"id" => id} = conn |> Req.Test.raw_body() |> URI.decode_query()
 
       if id == "t3_abc123" do
         Plug.Conn.send_resp(conn, 200, "{}")
