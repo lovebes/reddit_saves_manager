@@ -1483,14 +1483,14 @@ git commit -m "Add search box and inline tagging to PostsLive.Index"
 
 **Interfaces:**
 - Consumes: `Reddit.Client.unsave/2` (Task 5), `Reddit.valid_access_token/0` (Task 5), `Saves.archive_posts/1` (Task 2)
-- Produces: `Saves.unsave_posts/1` (list of `SavedPost` ids) -> `{:ok, %{unsaved: [id], failed: [id]}}`
+- Produces: `Saves.unsave_posts/2` (access_token, list of `SavedPost` ids) -> `{:ok, %{unsaved: [id], failed: [id]}}`
 
-- [ ] **Step 1: Write the failing test for `Saves.unsave_posts/1`**
+- [ ] **Step 1: Write the failing test for `Saves.unsave_posts/2`**
 
 Append to `test/reddit_saves_manager/saves_test.exs`:
 
 ```elixir
-  test "unsave_posts/1 archives posts that succeed and reports failures" do
+  test "unsave_posts/2 archives posts that succeed and reports failures" do
     Application.put_env(:reddit_saves_manager, :reddit_req_options,
       plug: {Req.Test, RedditSavesManager.Reddit.Client}
     )
