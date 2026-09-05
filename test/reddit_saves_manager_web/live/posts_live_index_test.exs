@@ -79,4 +79,24 @@ defmodule RedditSavesManagerWeb.PostsLiveIndexTest do
 
     assert html =~ "research"
   end
+
+  test "bulk unsave archives selected posts", %{conn: conn, post: post} do
+    Application.put_env(:reddit_saves_manager, :reddit_req_options,
+      plug: {Req.Test, RedditSavesManager.Reddit.Client}
+    )
+
+    Req.Test.stub(RedditSavesManager.Reddit.Client, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "{}")
+    end)
+
+    future = DateTime.add(DateTime.utc_now(), 3600, :second) |> DateTime.truncate(:second)
+    {:ok, _} = RedditSavesManager.Reddit.save_token(%{access_token: "atok", refresh_token: "rtok", expires_at: future})
+
+    {:ok, view, _html} = live(conn, ~p"/posts")
+
+    view |> element("input[phx-value-id='#{post.id}']") |> render_click()
+    html = view |> element("button", "Unsave selected") |> render_click()
+
+    refute html =~ post.title
+  end
 end

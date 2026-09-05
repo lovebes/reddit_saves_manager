@@ -76,4 +76,30 @@ defmodule RedditSavesManager.SavesTest do
     assert [found] = Saves.search_posts("GenServer")
     assert found.title == "GenServer timeout tuning"
   end
+
+  test "unsave_posts/2 archives posts that succeed and reports failures" do
+    Application.put_env(:reddit_saves_manager, :reddit_req_options,
+      plug: {Req.Test, RedditSavesManager.Reddit.Client}
+    )
+
+    {:ok, post1} = Saves.upsert_saved_post(@valid_attrs)
+    {:ok, post2} = Saves.upsert_saved_post(%{@valid_attrs | reddit_fullname: "t3_fail"})
+
+    Req.Test.stub(RedditSavesManager.Reddit.Client, fn conn ->
+      %{"id" => id} = conn |> Req.Test.raw_body() |> URI.decode_query()
+
+      if id == "t3_abc123" do
+        Plug.Conn.send_resp(conn, 200, "{}")
+      else
+        Plug.Conn.send_resp(conn, 500, "{}")
+      end
+    end)
+
+    assert {:ok, %{unsaved: unsaved, failed: failed}} =
+             Saves.unsave_posts("faketoken", [post1.id, post2.id])
+
+    assert post1.id in unsaved
+    assert post2.id in failed
+    assert Saves.list_active_posts() |> Enum.map(& &1.id) == [post2.id]
+  end
 end

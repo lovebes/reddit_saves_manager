@@ -14,6 +14,10 @@
   <button type="submit">Filter</button>
 </.form>
 
+<button phx-click="bulk_unsave" disabled={MapSet.size(@selected_ids) == 0}>
+  Unsave selected (<%= MapSet.size(@selected_ids) %>)
+</button>
+
 <ul>
   <li :for={post <- @posts}>
     <input

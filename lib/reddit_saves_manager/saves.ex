@@ -3,6 +3,7 @@ defmodule RedditSavesManager.Saves do
   alias RedditSavesManager.Repo
   alias RedditSavesManager.Saves.SavedPost
   alias RedditSavesManager.Saves.{Tag, PostTag}
+  alias RedditSavesManager.Reddit.Client
 
   def upsert_saved_post(attrs) do
     %SavedPost{}
@@ -102,4 +103,20 @@ defmodule RedditSavesManager.Saves do
   end
 
   def search_posts(_), do: []
+
+  def unsave_posts(access_token, ids) when is_list(ids) do
+    posts = Enum.map(ids, &get_saved_post!/1)
+
+    {succeeded, failed} =
+      Enum.split_with(posts, fn post ->
+        Client.unsave(access_token, post.reddit_fullname) == :ok
+      end)
+
+    succeeded_ids = Enum.map(succeeded, & &1.id)
+    failed_ids = Enum.map(failed, & &1.id)
+
+    if succeeded_ids != [], do: archive_posts(succeeded_ids)
+
+    {:ok, %{unsaved: succeeded_ids, failed: failed_ids}}
+  end
 end

@@ -106,4 +106,27 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
          )
      )}
   end
+
+  def handle_event("bulk_unsave", _params, socket) do
+    case Reddit.valid_access_token() do
+      {:ok, access_token} ->
+        ids = MapSet.to_list(socket.assigns.selected_ids)
+        {:ok, %{unsaved: unsaved, failed: failed}} = Saves.unsave_posts(access_token, ids)
+
+        message =
+          if failed == [] do
+            "Unsaved #{length(unsaved)} posts"
+          else
+            "Unsaved #{length(unsaved)}, failed on #{length(failed)}"
+          end
+
+        {:noreply,
+         socket
+         |> put_flash(:info, message)
+         |> assign(posts: Saves.list_active_posts(socket.assigns.filters), selected_ids: MapSet.new())}
+
+      {:error, :not_authenticated} ->
+        {:noreply, put_flash(socket, :error, "Connect your Reddit account first")}
+    end
+  end
 end
