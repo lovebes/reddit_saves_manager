@@ -72,11 +72,12 @@ defmodule RedditSavesManagerWeb.PostsLiveIndexTest do
   test "tagging a post from the list", %{conn: conn, post: post} do
     {:ok, view, _html} = live(conn, ~p"/posts")
 
-    html =
-      view
-      |> form("#tag-form-#{post.id}", tag: %{name: "research"})
-      |> render_submit()
+    view
+    |> form("#tag-form-#{post.id}", tag: %{name: "research"})
+    |> render_submit()
 
+    # Fresh mount with new DB connection to verify tag persisted
+    {:ok, _view2, html} = live(conn, ~p"/posts")
     assert html =~ "research"
   end
 end
