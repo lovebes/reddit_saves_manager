@@ -55,4 +55,18 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
 
     {:noreply, assign(socket, selected_ids: selected_ids)}
   end
+
+  def handle_event("search", %{"search" => %{"query" => ""}}, socket) do
+    {:noreply, assign(socket, posts: Saves.list_active_posts(socket.assigns.filters))}
+  end
+
+  def handle_event("search", %{"search" => %{"query" => query}}, socket) do
+    {:noreply, assign(socket, posts: Saves.search_posts(query))}
+  end
+
+  def handle_event("add_tag", %{"post_id" => post_id, "tag" => %{"name" => name}}, socket)
+      when name != "" do
+    {:ok, _} = Saves.tag_post(String.to_integer(post_id), name)
+    {:noreply, assign(socket, posts: Saves.list_active_posts(socket.assigns.filters))}
+  end
 end

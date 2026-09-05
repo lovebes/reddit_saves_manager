@@ -46,4 +46,37 @@ defmodule RedditSavesManagerWeb.PostsLiveIndexTest do
     assert html =~ "Photo booth printer specs"
     refute html =~ "OTP kata notes"
   end
+
+  test "search box filters by full-text match", %{conn: conn} do
+    {:ok, _} =
+      Saves.upsert_saved_post(%{
+        reddit_fullname: "t3_search1",
+        type: "link",
+        title: "Deep dive on Erlang schedulers",
+        subreddit: "erlang",
+        permalink: "/r/erlang/1/",
+        saved_at: ~U[2026-01-01 00:00:00Z]
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/posts")
+
+    html =
+      view
+      |> form("#search-form", search: %{query: "schedulers"})
+      |> render_submit()
+
+    assert html =~ "Deep dive on Erlang schedulers"
+    refute html =~ "OTP kata notes"
+  end
+
+  test "tagging a post from the list", %{conn: conn, post: post} do
+    {:ok, view, _html} = live(conn, ~p"/posts")
+
+    html =
+      view
+      |> form("#tag-form-#{post.id}", tag: %{name: "research"})
+      |> render_submit()
+
+    assert html =~ "research"
+  end
 end

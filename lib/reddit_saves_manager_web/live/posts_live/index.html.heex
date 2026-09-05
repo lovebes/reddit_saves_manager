@@ -2,6 +2,11 @@
 
 <button phx-click="sync">Sync now</button>
 
+<.form for={%{}} as={:search} id="search-form" phx-submit="search">
+  <input type="text" name="search[query]" placeholder="search title/body" />
+  <button type="submit">Search</button>
+</.form>
+
 <.form for={%{}} as={:filters} id="filters-form" phx-submit="filter">
   <input type="text" name="filters[subreddit]" placeholder="subreddit" value={@filters[:subreddit]} />
   <input type="text" name="filters[type]" placeholder="type (link/comment)" value={@filters[:type]} />
@@ -19,5 +24,11 @@
     />
     <.link navigate={~p"/posts/#{post.id}"}><%= post.title %></.link>
     (<%= post.subreddit %>)
+    <.form for={%{}} as={:tag} id={"tag-form-#{post.id}"} phx-submit="add_tag">
+      <input type="hidden" name="post_id" value={post.id} />
+      <input type="text" name="tag[name]" placeholder="add tag" />
+      <button type="submit">Tag</button>
+    </.form>
+    <span :for={tag <- Saves.list_tags_for_post(post.id)}><%= tag.name %></span>
   </li>
 </ul>
