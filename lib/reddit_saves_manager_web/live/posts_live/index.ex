@@ -7,7 +7,7 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
 
   def mount(_params, _session, socket) do
     {:ok,
-     assign(socket, filters: %{}, posts: Saves.list_active_posts(), selected_ids: MapSet.new())}
+     assign(socket, filters: %{}, posts: Saves.list_active_posts(), selected_ids: MapSet.new(), tag_bump: 0)}
   end
 
   def handle_event("filter", %{"filters" => filters}, socket) do
@@ -64,9 +64,16 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
     {:noreply, assign(socket, posts: Saves.search_posts(query))}
   end
 
-  def handle_event("add_tag", %{"post_id" => post_id, "tag" => %{"name" => name}}, socket)
-      when name != "" do
+  def handle_event("add_tag", %{"post_id" => _post_id, "tag" => %{"name" => ""}}, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("add_tag", %{"post_id" => post_id, "tag" => %{"name" => name}}, socket) do
     {:ok, _} = Saves.tag_post(String.to_integer(post_id), name)
-    {:noreply, assign(socket, posts: Saves.list_active_posts(socket.assigns.filters))}
+
+    {:noreply,
+     assign(socket,
+       tag_bump: socket.assigns.tag_bump + 1,
+       posts: Saves.list_active_posts(socket.assigns.filters))}
   end
 end
