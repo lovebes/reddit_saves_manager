@@ -6,8 +6,19 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
   alias RedditSavesManager.Reddit
 
   def mount(_params, _session, socket) do
+    posts = Saves.list_active_posts()
+
     {:ok,
-     assign(socket, filters: %{}, posts: Saves.list_active_posts(), selected_ids: MapSet.new(), tag_bump: 0)}
+     assign(socket,
+       filters: %{},
+       posts: posts,
+       selected_ids: MapSet.new(),
+       tags_by_post_id: tags_by_post_id(posts)
+     )}
+  end
+
+  defp tags_by_post_id(posts) do
+    Map.new(posts, fn post -> {post.id, Saves.list_tags_for_post(post.id)} end)
   end
 
   def handle_event("filter", %{"filters" => filters}, socket) do
@@ -16,7 +27,14 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
       |> Enum.reject(fn {_k, v} -> v == "" end)
       |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
 
-    {:noreply, assign(socket, filters: normalized, posts: Saves.list_active_posts(normalized))}
+    posts = Saves.list_active_posts(normalized)
+
+    {:noreply,
+     assign(socket,
+       filters: normalized,
+       posts: posts,
+       tags_by_post_id: tags_by_post_id(posts)
+     )}
   end
 
   def handle_event("sync", _params, socket) do
@@ -29,10 +47,12 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
 
         case Sync.run(access_token, username) do
           {:ok, %{synced: count}} ->
+            posts = Saves.list_active_posts(socket.assigns.filters)
+
             {:noreply,
              socket
              |> put_flash(:info, "Synced #{count} posts")
-             |> assign(posts: Saves.list_active_posts(socket.assigns.filters))}
+             |> assign(posts: posts, tags_by_post_id: tags_by_post_id(posts))}
 
           {:error, reason} ->
             {:noreply, put_flash(socket, :error, "Sync failed: #{inspect(reason)}")}
@@ -57,11 +77,15 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
   end
 
   def handle_event("search", %{"search" => %{"query" => ""}}, socket) do
-    {:noreply, assign(socket, posts: Saves.list_active_posts(socket.assigns.filters))}
+    posts = Saves.list_active_posts(socket.assigns.filters)
+
+    {:noreply, assign(socket, posts: posts, tags_by_post_id: tags_by_post_id(posts))}
   end
 
   def handle_event("search", %{"search" => %{"query" => query}}, socket) do
-    {:noreply, assign(socket, posts: Saves.search_posts(query))}
+    posts = Saves.search_posts(query)
+
+    {:noreply, assign(socket, posts: posts, tags_by_post_id: tags_by_post_id(posts))}
   end
 
   def handle_event("add_tag", %{"post_id" => _post_id, "tag" => %{"name" => ""}}, socket) do
@@ -69,11 +93,17 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
   end
 
   def handle_event("add_tag", %{"post_id" => post_id, "tag" => %{"name" => name}}, socket) do
-    {:ok, _} = Saves.tag_post(String.to_integer(post_id), name)
+    post_id = String.to_integer(post_id)
+    {:ok, _} = Saves.tag_post(post_id, name)
 
     {:noreply,
      assign(socket,
-       tag_bump: socket.assigns.tag_bump + 1,
-       posts: Saves.list_active_posts(socket.assigns.filters))}
+       tags_by_post_id:
+         Map.put(
+           socket.assigns.tags_by_post_id,
+           post_id,
+           Saves.list_tags_for_post(post_id)
+         )
+     )}
   end
 end

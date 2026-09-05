@@ -29,6 +29,6 @@
       <input type="text" name="tag[name]" placeholder="add tag" />
       <button type="submit">Tag</button>
     </.form>
-    <span :for={tag <- Saves.list_tags_for_post(post.id)}><%= tag.name %></span>
+    <span :for={tag <- @tags_by_post_id[post.id] || []}><%= tag.name %></span>
   </li>
 </ul>
