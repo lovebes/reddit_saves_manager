@@ -92,17 +92,33 @@ defmodule RedditSavesManager.Saves do
     ORDER BY rank
     """
 
-    {:ok, %{rows: rows, columns: columns}} = Repo.query(sql, [query_text])
+    case Repo.query(sql, [fts_match_query(query_text)]) do
+      {:ok, %{rows: rows, columns: columns}} ->
+        Enum.map(rows, fn row ->
+          columns
+          |> Enum.zip(row)
+          |> Map.new()
+          |> then(&Repo.load(SavedPost, &1))
+        end)
 
-    Enum.map(rows, fn row ->
-      columns
-      |> Enum.zip(row)
-      |> Map.new()
-      |> then(&Repo.load(SavedPost, &1))
-    end)
+      {:error, _reason} ->
+        []
+    end
   end
 
   def search_posts(_), do: []
+
+  # FTS5's MATCH operand is a query language, not a literal string — hyphens,
+  # apostrophes, `+`, and bare boolean keywords like AND/OR/NOT are all
+  # syntax there. Escape user input into a phrase query per token: wrap each
+  # whitespace-separated token in double quotes, doubling any internal
+  # double-quote characters (FTS5's escaping rule for quoted strings).
+  defp fts_match_query(query_text) do
+    query_text
+    |> String.split()
+    |> Enum.map(fn token -> "\"" <> String.replace(token, "\"", "\"\"") <> "\"" end)
+    |> Enum.join(" ")
+  end
 
   def unsave_posts(access_token, ids) when is_list(ids) do
     posts = Enum.map(ids, &get_saved_post!/1)

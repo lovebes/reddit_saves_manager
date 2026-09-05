@@ -77,6 +77,24 @@ defmodule RedditSavesManager.SavesTest do
     assert found.title == "GenServer timeout tuning"
   end
 
+  test "search_posts/1 does not crash on FTS5 special characters and bare boolean keywords" do
+    {:ok, _} =
+      Saves.upsert_saved_post(
+        @valid_attrs
+        |> Map.put(:reddit_fullname, "t3_special1")
+        |> Map.put(:title, "Notes on self-hosted deployments")
+        |> Map.put(:selftext, "it's a good setup")
+      )
+
+    assert is_list(Saves.search_posts("self-hosted"))
+    assert is_list(Saves.search_posts("it's"))
+    assert is_list(Saves.search_posts("c++"))
+    assert is_list(Saves.search_posts("AND"))
+
+    assert [found] = Saves.search_posts("self-hosted")
+    assert found.title == "Notes on self-hosted deployments"
+  end
+
   test "unsave_posts/2 archives posts that succeed and reports failures" do
     Application.put_env(:reddit_saves_manager, :reddit_req_options,
       plug: {Req.Test, RedditSavesManager.Reddit.Client}
