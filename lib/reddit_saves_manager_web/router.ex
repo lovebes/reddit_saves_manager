@@ -23,6 +23,7 @@ defmodule RedditSavesManagerWeb.Router do
     get "/auth/reddit/callback", AuthController, :callback
 
     live "/posts", PostsLive.Index
+    live "/posts/:id", PostsLive.Show
   end
 
   # Other scopes may use custom stacks.

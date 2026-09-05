@@ -1,0 +1,10 @@
+<Layouts.flash_group flash={@flash} />
+<h1><%= @post.title %></h1>
+<p><%= @post.subreddit %> — <a href={@post.url}><%= @post.url %></a></p>
+<p><%= @post.selftext %></p>
+
+<.form for={%{}} as={:doc} id="generate-doc-form" phx-submit="generate_doc">
+  <label for="comment_count">Number of top comments to include</label>
+  <input type="number" name="doc[comment_count]" id="comment_count" value="20" min="1" />
+  <button type="submit">Generate research doc</button>
+</.form>
