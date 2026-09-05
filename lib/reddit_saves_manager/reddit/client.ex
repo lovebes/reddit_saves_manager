@@ -3,6 +3,10 @@ defmodule RedditSavesManager.Reddit.Client do
   @token_endpoint "https://www.reddit.com/api/v1/access_token"
   @api_base "https://oauth.reddit.com"
 
+  # Reddit's API rules require a distinctive User-Agent; generic HTTP-client
+  # user agents can be rate-limited or rejected outright.
+  @user_agent "reddit-saves-manager/0.1 (personal use script)"
+
   defp config, do: Application.fetch_env!(:reddit_saves_manager, :reddit) |> Map.new()
   defp req_options, do: Application.get_env(:reddit_saves_manager, :reddit_req_options, [])
 
@@ -46,7 +50,8 @@ defmodule RedditSavesManager.Reddit.Client do
         [
           url: @token_endpoint,
           form: form_body,
-          auth: {:basic, "#{client_id}:#{client_secret}"}
+          auth: {:basic, "#{client_id}:#{client_secret}"},
+          headers: [{"user-agent", @user_agent}]
         ] ++ req_options()
       )
 
@@ -77,7 +82,8 @@ defmodule RedditSavesManager.Reddit.Client do
         [
           url: @api_base <> "/user/#{username}/saved",
           params: params,
-          auth: {:bearer, access_token}
+          auth: {:bearer, access_token},
+          headers: [{"user-agent", @user_agent}]
         ] ++ req_options()
       )
 
@@ -98,7 +104,8 @@ defmodule RedditSavesManager.Reddit.Client do
       Req.get(
         [
           url: @api_base <> "/r/#{subreddit}/comments/#{post_id36}",
-          auth: {:bearer, access_token}
+          auth: {:bearer, access_token},
+          headers: [{"user-agent", @user_agent}]
         ] ++ req_options()
       )
 
@@ -127,7 +134,8 @@ defmodule RedditSavesManager.Reddit.Client do
         [
           url: @api_base <> "/api/unsave",
           form: %{"id" => fullname},
-          auth: {:bearer, access_token}
+          auth: {:bearer, access_token},
+          headers: [{"user-agent", @user_agent}]
         ] ++ req_options()
       )
 
