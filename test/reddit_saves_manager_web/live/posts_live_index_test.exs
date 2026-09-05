@@ -25,6 +25,19 @@ defmodule RedditSavesManagerWeb.PostsLiveIndexTest do
     assert html =~ post.title
   end
 
+  test "renders a link to connect a Reddit account", %{conn: conn} do
+    {:ok, _view, html} = live(conn, ~p"/posts")
+    assert html =~ ~s(href="/auth/reddit")
+  end
+
+  test "syncing with no Reddit token connected shows a flash message", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/posts")
+
+    html = view |> element("button", "Sync now") |> render_click()
+
+    assert html =~ "Connect your Reddit account first"
+  end
+
   test "filters by subreddit", %{conn: conn} do
     {:ok, _} =
       Saves.upsert_saved_post(%{
