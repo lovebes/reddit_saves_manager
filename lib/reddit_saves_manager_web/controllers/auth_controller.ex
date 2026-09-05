@@ -11,6 +11,12 @@ defmodule RedditSavesManagerWeb.AuthController do
     |> redirect(external: Client.authorize_url(state))
   end
 
+  def callback(conn, %{"error" => reason}) do
+    conn
+    |> put_flash(:error, "Reddit authorization was denied (#{reason})")
+    |> redirect(to: ~p"/")
+  end
+
   def callback(conn, %{"code" => code, "state" => state}) do
     if get_session(conn, :reddit_oauth_state) == state do
       case Client.exchange_code(code) do
