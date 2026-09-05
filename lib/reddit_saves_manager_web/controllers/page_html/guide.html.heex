@@ -1,0 +1,88 @@
+<Layouts.flash_group flash={@flash} />
+<div class="px-4 py-10 sm:px-6 lg:px-8 xl:px-28 max-w-3xl">
+  <h1 class="text-2xl font-semibold mb-2">How to use RedditSavesManager</h1>
+  <p class="text-base-content/70 mb-8">
+    A single-account tool for syncing, tagging, and cleaning up your Reddit saved posts,
+    and turning any saved thread into an AI-generated research doc.
+  </p>
+
+  <h2 class="text-lg font-semibold mt-8 mb-2">1. One-time setup: environment variables</h2>
+  <p class="mb-2">
+    Before the app can talk to Reddit or generate research docs, it needs API credentials.
+  </p>
+  <ol class="list-decimal list-inside space-y-1 mb-2">
+    <li>
+      Copy <code phx-no-curly-interpolation>.env.sample</code>
+      to <code phx-no-curly-interpolation>.env</code>
+      in the project root.
+    </li>
+    <li>Fill in <code phx-no-curly-interpolation>REDDIT_CLIENT_ID</code>, <code phx-no-curly-interpolation>REDDIT_CLIENT_SECRET</code>, and <code phx-no-curly-interpolation>REDDIT_USERNAME</code> from a Reddit "script" app you create at
+      <a href="https://www.reddit.com/prefs/apps" class="link" target="_blank" rel="noopener">reddit.com/prefs/apps</a>.
+      Use <code phx-no-curly-interpolation>http://localhost:4000/auth/reddit/callback</code> as the redirect URI.
+    </li>
+    <li>Fill in <code phx-no-curly-interpolation>OPENROUTER_API_KEY</code> from
+      <a href="https://openrouter.ai/settings/keys" class="link" target="_blank" rel="noopener">openrouter.ai/settings/keys</a>
+      (needed only for research doc generation, not for syncing).
+    </li>
+    <li>Restart <code phx-no-curly-interpolation>mix phx.server</code> after editing <code phx-no-curly-interpolation>.env</code>.</li>
+  </ol>
+  <p class="mb-2">
+    Full field-by-field instructions, including screenshots of where each value lives on Reddit
+    and OpenRouter's dashboards, are in the <code phx-no-curly-interpolation>.env.sample</code>
+    file's comments.
+  </p>
+
+  <h2 class="text-lg font-semibold mt-8 mb-2">2. Connect your Reddit account</h2>
+  <p class="mb-2">
+    From the <.link navigate={~p"/"} class="link">home page</.link>, click
+    <strong>Connect Reddit account</strong>. You'll be sent to Reddit to authorize the app,
+    then redirected back and signed in. This only needs to be done once — the app stores a
+    refresh token and renews access automatically.
+  </p>
+
+  <h2 class="text-lg font-semibold mt-8 mb-2">3. Sync your saved posts</h2>
+  <p class="mb-2">
+    Go to <.link navigate={~p"/posts"} class="link">Saved Posts</.link> and click
+    <strong>Sync now</strong>. This pulls every post and comment you've saved on Reddit into
+    the local database. Run it again any time to pick up new saves — syncing is safe to repeat
+    and won't create duplicates.
+  </p>
+
+  <h2 class="text-lg font-semibold mt-8 mb-2">4. Search, filter, and tag</h2>
+  <ul class="list-disc list-inside space-y-1 mb-2">
+    <li><strong>Search</strong> matches text in the post title or body.</li>
+    <li>
+      <strong>Filter</strong> narrows the list by subreddit, type (<code phx-no-curly-interpolation>link</code> or <code phx-no-curly-interpolation>comment</code>), or an existing tag.
+    </li>
+    <li>
+      <strong>Tag</strong> — type a name into a post's "add tag" box and submit to label it.
+      Tags are freeform text; use the filter box to later pull up everything with a given tag.
+    </li>
+  </ul>
+
+  <h2 class="text-lg font-semibold mt-8 mb-2">5. Clean up: bulk unsave</h2>
+  <p class="mb-2">
+    Check the box next to any posts you're done with, then click
+    <strong>Unsave selected</strong>. This removes them from your saved list on Reddit itself
+    (not just from this app's local view).
+  </p>
+
+  <h2 class="text-lg font-semibold mt-8 mb-2">6. Generate an AI research doc from a thread</h2>
+  <p class="mb-2">
+    Open any saved post's detail page, choose how many top comments to include, and click
+    <strong>Generate research doc</strong>. The app fetches that thread's comments from Reddit,
+    sends the post plus its highest-scored comments to the model configured in
+    <code phx-no-curly-interpolation>OPENROUTER_MODEL</code>, and writes a markdown summary to
+    <code phx-no-curly-interpolation>~/reddit-research/</code> on the server's filesystem
+    (one file per post, named after the post's title).
+  </p>
+  <p class="mb-2">
+    This step calls OpenRouter's API and costs money per request — see
+    <a href="https://openrouter.ai/models" class="link" target="_blank" rel="noopener">openrouter.ai/models</a>
+    for pricing on the model you've configured.
+  </p>
+
+  <p class="mt-10">
+    <.link navigate={~p"/posts"} class="link">&larr; Back to Saved Posts</.link>
+  </p>
+</div>
