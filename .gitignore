@@ -42,3 +42,6 @@ npm-debug.log
 # Local secrets
 .env
 
+# Claude Code tooling state (worktrees may contain real .env/db files)
+/.claude/
+
