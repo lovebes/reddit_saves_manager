@@ -43,6 +43,13 @@ defmodule RedditSavesManager.Reddit do
         })
 
       {:ok, new_access_token}
+    else
+      # A rejected/dead refresh token (network hiccup, revoked-access, or any
+      # other failure/unexpected shape from Client.refresh_token/1) genuinely
+      # means "not authenticated" — normalize every failure to the documented
+      # contract so callers never see a raw error tuple or crash on a
+      # WithClauseError.
+      _ -> {:error, :not_authenticated}
     end
   end
 end
