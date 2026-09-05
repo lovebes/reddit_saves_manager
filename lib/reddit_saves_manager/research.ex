@@ -55,6 +55,11 @@ defmodule RedditSavesManager.Research do
     end
   end
 
+  # Max length of the title-derived portion of the slug, before the
+  # `-#{post.id}` uniqueness suffix is appended. Keeps the final filename
+  # well clear of ENAMETOOLONG even for Reddit's up-to-300-character titles.
+  @max_slug_length 80
+
   defp write_doc_file(post, markdown) do
     dir =
       Application.get_env(
@@ -63,28 +68,45 @@ defmodule RedditSavesManager.Research do
         Path.expand("~/reddit-research")
       )
 
-    File.mkdir_p!(dir)
+    with :ok <- File.mkdir_p(dir) do
+      file_path = Path.join(dir, "#{slug_for(post)}.md")
 
-    slug =
+      frontmatter = """
+      ---
+      title: "#{post.title}"
+      url: "#{post.url}"
+      subreddit: "#{post.subreddit}"
+      date: "#{Date.utc_today()}"
+      tags: []
+      ---
+
+      """
+
+      case File.write(file_path, frontmatter <> markdown) do
+        :ok -> {:ok, file_path}
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  end
+
+  # Slugs are always suffixed with the post id for uniqueness (two posts with
+  # the same or similarly-normalized title would otherwise silently overwrite
+  # each other), and fall back to "post-#{id}" when the title has no ASCII
+  # alphanumeric characters at all (e.g. an all-Korean title), which would
+  # otherwise normalize to "" and produce a hidden dotfile path.
+  defp slug_for(post) do
+    base =
       post.title
       |> String.downcase()
       |> String.replace(~r/[^a-z0-9]+/, "-")
       |> String.trim("-")
 
-    file_path = Path.join(dir, "#{slug}.md")
+    base =
+      case base do
+        "" -> "post"
+        _ -> String.slice(base, 0, @max_slug_length) |> String.trim_trailing("-")
+      end
 
-    frontmatter = """
-    ---
-    title: "#{post.title}"
-    url: "#{post.url}"
-    subreddit: "#{post.subreddit}"
-    date: "#{Date.utc_today()}"
-    tags: []
-    ---
-
-    """
-
-    File.write!(file_path, frontmatter <> markdown)
-    {:ok, file_path}
+    "#{base}-#{post.id}"
   end
 end

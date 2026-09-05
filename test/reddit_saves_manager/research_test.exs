@@ -95,4 +95,53 @@ defmodule RedditSavesManager.ResearchTest do
     assert File.exists?(doc.file_path)
     assert File.read!(doc.file_path) =~ "# Doc"
   end
+
+  test "generate_and_save/2 produces a valid, non-colliding file path for a title with no ASCII alphanumeric characters" do
+    tmp_dir =
+      System.tmp_dir!()
+      |> Path.join("reddit_research_test_#{System.unique_integer([:positive])}")
+
+    Application.put_env(:reddit_saves_manager, :research_output_dir, tmp_dir)
+
+    Application.put_env(:reddit_saves_manager, :reddit_req_options,
+      plug: {Req.Test, RedditClient}
+    )
+
+    Application.put_env(:reddit_saves_manager, :open_router_req_options,
+      plug: {Req.Test, OpenRouterClient}
+    )
+
+    future = DateTime.add(DateTime.utc_now(), 3600, :second) |> DateTime.truncate(:second)
+
+    {:ok, _} =
+      RedditSavesManager.Reddit.save_token(%{
+        access_token: "atok",
+        refresh_token: "rtok",
+        expires_at: future
+      })
+
+    {:ok, post} =
+      Saves.upsert_saved_post(%{
+        reddit_fullname: "t3_kor1",
+        type: "link",
+        title: "한글 제목",
+        subreddit: "korea",
+        permalink: "/r/korea/comments/kor1/korean_title/",
+        saved_at: ~U[2026-01-01 00:00:00Z]
+      })
+
+    Req.Test.stub(RedditClient, fn conn ->
+      Req.Test.json(conn, [%{}, %{"data" => %{"children" => []}}])
+    end)
+
+    Req.Test.stub(OpenRouterClient, fn conn ->
+      Req.Test.json(conn, %{"choices" => [%{"message" => %{"content" => "# Doc"}}]})
+    end)
+
+    assert {:ok, doc} = RedditSavesManager.Research.generate_and_save(post, 5)
+    assert File.exists?(doc.file_path)
+    filename = Path.basename(doc.file_path)
+    refute String.starts_with?(filename, ".")
+    assert filename == "post-#{post.id}.md"
+  end
 end
