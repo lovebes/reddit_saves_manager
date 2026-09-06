@@ -1,3 +1,11 @@
+> **2026-09-06 update:** This plan's Reddit OAuth tasks (Task 5, and the
+> OAuth-dependent parts of Tasks 6/9 and the research-doc comment fetch)
+> were built and then ripped out — Reddit's Responsible Builder Policy
+> denies the OAuth scopes this app needs. See the update note at the top of
+> the design spec for the replacement architecture (browser-driven pull +
+> `mix reddit.ingest_saved`). Left below as a historical record of what was
+> built; don't use it to re-add OAuth.
+
 # Reddit Saves Manager Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

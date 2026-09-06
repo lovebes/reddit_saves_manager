@@ -13,6 +13,7 @@ defmodule RedditSavesManager.Saves.SavedPost do
     field :score, :integer, default: 0
     field :created_utc, :utc_datetime
     field :selftext, :string
+    field :comments_raw, :string
     field :saved_at, :utc_datetime
     field :archived_at, :utc_datetime
 
@@ -20,7 +21,7 @@ defmodule RedditSavesManager.Saves.SavedPost do
   end
 
   @required [:reddit_fullname, :type, :title, :subreddit, :permalink, :saved_at]
-  @optional [:url, :author, :score, :created_utc, :selftext, :archived_at]
+  @optional [:url, :author, :score, :created_utc, :selftext, :comments_raw, :archived_at]
 
   def changeset(saved_post, attrs) do
     saved_post

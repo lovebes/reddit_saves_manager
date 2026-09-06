@@ -1,11 +1,9 @@
 defmodule RedditSavesManagerWeb.PostsLiveShowTest do
-  # async: false — the doc-generation test stubs Req via shared
-  # :reddit_req_options / :open_router_req_options Application env keys
-  # (see the note in reddit/client_test.exs).
+  # async: false — the doc-generation test stubs Req via the shared
+  # :open_router_req_options Application env key.
   use RedditSavesManagerWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
   alias RedditSavesManager.Saves
-  alias RedditSavesManager.Reddit.Client, as: RedditClient
   alias RedditSavesManager.Research.OpenRouterClient
 
   setup do
@@ -28,17 +26,15 @@ defmodule RedditSavesManagerWeb.PostsLiveShowTest do
   end
 
   test "generating a research doc shows a success flash", %{conn: conn, post: post} do
-    tmp_dir = System.tmp_dir!() |> Path.join("reddit_research_show_test_#{System.unique_integer([:positive])}")
+    tmp_dir =
+      System.tmp_dir!()
+      |> Path.join("reddit_research_show_test_#{System.unique_integer([:positive])}")
+
     Application.put_env(:reddit_saves_manager, :research_output_dir, tmp_dir)
-    Application.put_env(:reddit_saves_manager, :reddit_req_options, plug: {Req.Test, RedditClient})
-    Application.put_env(:reddit_saves_manager, :open_router_req_options, plug: {Req.Test, OpenRouterClient})
 
-    future = DateTime.add(DateTime.utc_now(), 3600, :second) |> DateTime.truncate(:second)
-    {:ok, _} = RedditSavesManager.Reddit.save_token(%{access_token: "atok", refresh_token: "rtok", expires_at: future})
-
-    Req.Test.stub(RedditClient, fn conn ->
-      Req.Test.json(conn, [%{}, %{"data" => %{"children" => []}}])
-    end)
+    Application.put_env(:reddit_saves_manager, :open_router_req_options,
+      plug: {Req.Test, OpenRouterClient}
+    )
 
     Req.Test.stub(OpenRouterClient, fn conn ->
       Req.Test.json(conn, %{"choices" => [%{"message" => %{"content" => "# Doc"}}]})
@@ -48,7 +44,9 @@ defmodule RedditSavesManagerWeb.PostsLiveShowTest do
 
     html =
       view
-      |> form("#generate-doc-form", doc: %{comment_count: "10"})
+      |> form("#generate-doc-form",
+        doc: %{comment_count: "10", comments_raw: "some raw comments"}
+      )
       |> render_submit()
 
     assert html =~ "Research doc generated"

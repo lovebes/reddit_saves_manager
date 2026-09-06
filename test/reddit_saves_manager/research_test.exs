@@ -2,25 +2,9 @@ defmodule RedditSavesManager.ResearchTest do
   use RedditSavesManager.DataCase, async: false
   alias RedditSavesManager.Research
   alias RedditSavesManager.Saves
-  alias RedditSavesManager.Reddit.Client, as: RedditClient
   alias RedditSavesManager.Research.OpenRouterClient
 
-  test "top_comments/2 sorts by score descending and takes n" do
-    comments = [
-      %{author: "a", score: 5, body: "meh"},
-      %{author: "b", score: 42, body: "great point"},
-      %{author: "c", score: 10, body: "also good"}
-    ]
-
-    assert [%{author: "b"}, %{author: "c"}] = Research.top_comments(comments, 2)
-  end
-
-  test "top_comments/2 returns all comments if n exceeds count" do
-    comments = [%{author: "a", score: 1, body: "x"}]
-    assert [%{author: "a"}] = Research.top_comments(comments, 50)
-  end
-
-  test "build_prompt/2 includes post title, url, and comment bodies" do
+  test "build_prompt/3 includes post title, url, raw comments, and the top-N instruction" do
     post = %Saves.SavedPost{
       title: "OTP kata notes",
       url: "https://reddit.com/x",
@@ -28,37 +12,23 @@ defmodule RedditSavesManager.ResearchTest do
       selftext: "some body"
     }
 
-    comments = [%{author: "a", score: 10, body: "great insight"}]
-
-    prompt = RedditSavesManager.Research.build_prompt(post, comments)
+    prompt = Research.build_prompt(post, "raw jumbled comment text, score 42", 5)
 
     assert prompt =~ "OTP kata notes"
     assert prompt =~ "https://reddit.com/x"
-    assert prompt =~ "great insight"
+    assert prompt =~ "raw jumbled comment text, score 42"
+    assert prompt =~ "top 5"
   end
 
-  test "generate_and_save/2 fetches comments, calls OpenRouter, writes a file, and records metadata" do
+  test "generate_and_save/3 sends the raw comments blob to OpenRouter, writes a file, and records metadata" do
     tmp_dir =
       System.tmp_dir!() |> Path.join("reddit_research_test_#{System.unique_integer([:positive])}")
 
     Application.put_env(:reddit_saves_manager, :research_output_dir, tmp_dir)
 
-    Application.put_env(:reddit_saves_manager, :reddit_req_options,
-      plug: {Req.Test, RedditClient}
-    )
-
     Application.put_env(:reddit_saves_manager, :open_router_req_options,
       plug: {Req.Test, OpenRouterClient}
     )
-
-    future = DateTime.add(DateTime.utc_now(), 3600, :second) |> DateTime.truncate(:second)
-
-    {:ok, _} =
-      RedditSavesManager.Reddit.save_token(%{
-        access_token: "atok",
-        refresh_token: "rtok",
-        expires_at: future
-      })
 
     {:ok, post} =
       Saves.upsert_saved_post(%{
@@ -70,55 +40,26 @@ defmodule RedditSavesManager.ResearchTest do
         saved_at: ~U[2026-01-01 00:00:00Z]
       })
 
-    Req.Test.stub(RedditClient, fn conn ->
-      Req.Test.json(conn, [
-        %{},
-        %{
-          "data" => %{
-            "children" => [
-              %{
-                "kind" => "t1",
-                "data" => %{"author" => "a", "score" => 10, "body" => "great insight"}
-              }
-            ]
-          }
-        }
-      ])
-    end)
-
     Req.Test.stub(OpenRouterClient, fn conn ->
       Req.Test.json(conn, %{"choices" => [%{"message" => %{"content" => "# Doc\n\nContent"}}]})
     end)
 
-    assert {:ok, doc} = RedditSavesManager.Research.generate_and_save(post, 5)
+    assert {:ok, doc} = Research.generate_and_save(post, "author a, 10 points: great insight", 5)
     assert doc.comment_count_used == 5
     assert File.exists?(doc.file_path)
     assert File.read!(doc.file_path) =~ "# Doc"
   end
 
-  test "generate_and_save/2 produces a valid, non-colliding file path for a title with no ASCII alphanumeric characters" do
+  test "generate_and_save/3 produces a valid, non-colliding file path for a title with no ASCII alphanumeric characters" do
     tmp_dir =
       System.tmp_dir!()
       |> Path.join("reddit_research_test_#{System.unique_integer([:positive])}")
 
     Application.put_env(:reddit_saves_manager, :research_output_dir, tmp_dir)
 
-    Application.put_env(:reddit_saves_manager, :reddit_req_options,
-      plug: {Req.Test, RedditClient}
-    )
-
     Application.put_env(:reddit_saves_manager, :open_router_req_options,
       plug: {Req.Test, OpenRouterClient}
     )
-
-    future = DateTime.add(DateTime.utc_now(), 3600, :second) |> DateTime.truncate(:second)
-
-    {:ok, _} =
-      RedditSavesManager.Reddit.save_token(%{
-        access_token: "atok",
-        refresh_token: "rtok",
-        expires_at: future
-      })
 
     {:ok, post} =
       Saves.upsert_saved_post(%{
@@ -130,15 +71,11 @@ defmodule RedditSavesManager.ResearchTest do
         saved_at: ~U[2026-01-01 00:00:00Z]
       })
 
-    Req.Test.stub(RedditClient, fn conn ->
-      Req.Test.json(conn, [%{}, %{"data" => %{"children" => []}}])
-    end)
-
     Req.Test.stub(OpenRouterClient, fn conn ->
       Req.Test.json(conn, %{"choices" => [%{"message" => %{"content" => "# Doc"}}]})
     end)
 
-    assert {:ok, doc} = RedditSavesManager.Research.generate_and_save(post, 5)
+    assert {:ok, doc} = Research.generate_and_save(post, "", 5)
     assert File.exists?(doc.file_path)
     filename = Path.basename(doc.file_path)
     refute String.starts_with?(filename, ".")

@@ -3,12 +3,6 @@ import Dotenvy
 
 Dotenvy.source!([Path.absname(".env"), System.get_env()])
 
-config :reddit_saves_manager, :reddit,
-  client_id: env!("REDDIT_CLIENT_ID", :string),
-  client_secret: env!("REDDIT_CLIENT_SECRET", :string),
-  redirect_uri: "http://localhost:4000/auth/reddit/callback",
-  username: env!("REDDIT_USERNAME", :string)
-
 config :reddit_saves_manager, :open_router,
   api_key: env!("OPENROUTER_API_KEY", :string),
   model: env!("OPENROUTER_MODEL", :string)

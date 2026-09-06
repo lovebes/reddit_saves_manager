@@ -1,5 +1,17 @@
 # Reddit Saves Manager — Design
 
+> **2026-09-06 update:** Reddit's Responsible Builder Policy denies this
+> app's OAuth app the scopes it needs, so the OAuth/API sections below
+> (Reddit sync, unsave, comment-tree fetch) are superseded. Saved posts,
+> unsaving, and comment fetching are now done by driving a real browser
+> session (Claude's browser tool) against reddit.com directly, and loading
+> results into the app via `mix reddit.ingest_saved` (saved posts) or by
+> pasting comments JSON into the research-doc form (comment fetch). See
+> `lib/mix/tasks/reddit.ingest_saved.ex` for the exact contract. Bulk
+> "unsave" in the app now only archives locally; removing from Reddit
+> itself is a separate browser-driven action done on request. The Reddit
+> OAuth token storage, client, and auth controller have been deleted.
+
 ## Purpose
 
 A personal, local-only tool to manage Reddit "saved" posts/comments: browse,

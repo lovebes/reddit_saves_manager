@@ -9,10 +9,14 @@ defmodule RedditSavesManagerWeb.PostsLive.Show do
     {:ok, assign(socket, post: post)}
   end
 
-  def handle_event("generate_doc", %{"doc" => %{"comment_count" => comment_count}}, socket) do
+  def handle_event(
+        "generate_doc",
+        %{"doc" => %{"comment_count" => comment_count, "comments_raw" => comments_raw}},
+        socket
+      ) do
     comment_count = String.to_integer(comment_count)
 
-    case Research.generate_and_save(socket.assigns.post, comment_count) do
+    case Research.generate_and_save(socket.assigns.post, comments_raw, comment_count) do
       {:ok, doc} ->
         {:noreply, put_flash(socket, :info, "Research doc generated: #{doc.file_path}")}
 

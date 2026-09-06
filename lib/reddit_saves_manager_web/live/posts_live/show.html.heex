@@ -1,10 +1,66 @@
-<Layouts.flash_group flash={@flash} />
-<h1><%= @post.title %></h1>
-<p><%= @post.subreddit %> — <a href={@post.url}><%= @post.url %></a></p>
-<p><%= @post.selftext %></p>
+<Layouts.app flash={@flash}>
+  <.header>
+    {@post.title}
+    <:subtitle>
+      <a href={@post.url} target="_blank" rel="noopener" class="link link-hover">
+        r/{@post.subreddit}
+      </a>
+    </:subtitle>
+    <:actions>
+      <.link navigate={~p"/posts"} class="btn btn-ghost btn-sm">
+        <.icon name="hero-arrow-left" class="size-4" /> Back
+      </.link>
+    </:actions>
+  </.header>
 
-<.form for={%{}} as={:doc} id="generate-doc-form" phx-submit="generate_doc">
-  <label for="comment_count">Number of top comments to include</label>
-  <input type="number" name="doc[comment_count]" id="comment_count" value="20" min="1" />
-  <button type="submit">Generate research doc</button>
-</.form>
+  <div
+    :if={@post.selftext}
+    class="mb-6 whitespace-pre-wrap rounded-box border border-base-300 bg-base-100 p-4 text-sm"
+  >
+    {@post.selftext}
+  </div>
+
+  <div class="card border border-base-300 bg-base-100">
+    <div class="card-body">
+      <h2 class="card-title text-base">Generate research doc</h2>
+
+      <.form
+        for={%{}}
+        as={:doc}
+        id="generate-doc-form"
+        phx-submit="generate_doc"
+        class="flex flex-col gap-1"
+      >
+        <div class="fieldset mb-2">
+          <label>
+            <span class="label mb-1">
+              Raw comment section (scrape/copy-paste straight off the permalink above —
+              no need to structure it, the model cleans it up)
+            </span>
+            <textarea
+              name="doc[comments_raw]"
+              id="comments_raw"
+              rows="12"
+              placeholder="Paste the raw copied comment section here…"
+              class="textarea w-full font-mono text-xs"
+            >{@post.comments_raw}</textarea>
+          </label>
+        </div>
+
+        <.input
+          type="number"
+          name="doc[comment_count]"
+          id="comment_count"
+          value="20"
+          min="1"
+          label="Number of top comments to include"
+          class="input w-full max-w-40"
+        />
+
+        <div class="card-actions">
+          <.button variant="primary">Generate research doc</.button>
+        </div>
+      </.form>
+    </div>
+  </div>
+</Layouts.app>

@@ -1,42 +1,124 @@
-<Layouts.flash_group flash={@flash} />
-<h1>Saved Posts</h1>
+<Layouts.app flash={@flash}>
+  <.header>
+    Saved Posts
+    <:subtitle>{length(@posts)} active</:subtitle>
+    <:actions>
+      <button phx-click="refresh" class="btn btn-sm btn-soft">
+        <.icon name="hero-arrow-path" class="size-4" /> Refresh list
+      </button>
+    </:actions>
+  </.header>
 
-<.link navigate={~p"/guide"}>How to use this app</.link>
+  <div class="alert alert-info mb-6 text-sm">
+    <.icon name="hero-information-circle" class="size-5 shrink-0" />
+    <span>
+      New saves come in via
+      <code class="rounded bg-base-200 px-1 py-0.5 font-mono text-base-content">
+        mix reddit.ingest_saved path/to/saved.json
+      </code>
+      — ask Claude to scrape reddit.com/user/&lt;you&gt;/saved/ and produce that file, then click <span class="font-semibold">Refresh list</span>. See the
+      <.link navigate={~p"/guide"} class="link link-hover">guide</.link>
+      for details.
+    </span>
+  </div>
 
-<.link href={~p"/auth/reddit"}>Connect Reddit account</.link>
-<button phx-click="sync">Sync now</button>
-
-<.form for={%{}} as={:search} id="search-form" phx-submit="search">
-  <input type="text" name="search[query]" placeholder="search title/body" />
-  <button type="submit">Search</button>
-</.form>
-
-<.form for={%{}} as={:filters} id="filters-form" phx-submit="filter">
-  <input type="text" name="filters[subreddit]" placeholder="subreddit" value={@filters[:subreddit]} />
-  <input type="text" name="filters[type]" placeholder="type (link/comment)" value={@filters[:type]} />
-  <input type="text" name="filters[tag]" placeholder="tag" value={@filters[:tag]} />
-  <button type="submit">Filter</button>
-</.form>
-
-<button phx-click="bulk_unsave" disabled={MapSet.size(@selected_ids) == 0}>
-  Unsave selected (<%= MapSet.size(@selected_ids) %>)
-</button>
-
-<ul>
-  <li :for={post <- @posts}>
-    <input
-      type="checkbox"
-      checked={MapSet.member?(@selected_ids, post.id)}
-      phx-click="toggle_select"
-      phx-value-id={post.id}
-    />
-    <.link navigate={~p"/posts/#{post.id}"}><%= post.title %></.link>
-    (<%= post.subreddit %>)
-    <.form for={%{}} as={:tag} id={"tag-form-#{post.id}"} phx-submit="add_tag">
-      <input type="hidden" name="post_id" value={post.id} />
-      <input type="text" name="tag[name]" placeholder="add tag" />
-      <button type="submit">Tag</button>
+  <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <.form for={%{}} as={:search} id="search-form" phx-submit="search" class="w-full sm:max-w-xs">
+      <label class="input w-full">
+        <.icon name="hero-magnifying-glass" class="size-4 opacity-50" />
+        <input type="text" name="search[query]" placeholder="Search title/body…" />
+      </label>
     </.form>
-    <span :for={tag <- @tags_by_post_id[post.id] || []}><%= tag.name %></span>
-  </li>
-</ul>
+
+    <.form
+      for={%{}}
+      as={:filters}
+      id="filters-form"
+      phx-submit="filter"
+      class="flex flex-wrap items-center gap-2"
+    >
+      <input
+        type="text"
+        name="filters[subreddit]"
+        placeholder="subreddit"
+        value={@filters[:subreddit]}
+        class="input input-sm w-28"
+      />
+      <select name="filters[type]" class="select select-sm w-28">
+        <option value="" selected={@filters[:type] in [nil, ""]}>All types</option>
+        <option value="link" selected={@filters[:type] == "link"}>Link</option>
+        <option value="comment" selected={@filters[:type] == "comment"}>Comment</option>
+      </select>
+      <input
+        type="text"
+        name="filters[tag]"
+        placeholder="tag"
+        value={@filters[:tag]}
+        class="input input-sm w-24"
+      />
+      <button type="submit" class="btn btn-sm btn-soft">Filter</button>
+    </.form>
+  </div>
+
+  <div class="mb-3 flex items-center justify-between">
+    <span class="text-sm text-base-content/60">
+      {MapSet.size(@selected_ids)} selected
+    </span>
+    <button
+      phx-click="bulk_unsave"
+      disabled={MapSet.size(@selected_ids) == 0}
+      class="btn btn-sm btn-error btn-soft"
+    >
+      Unsave selected ({MapSet.size(@selected_ids)})
+    </button>
+  </div>
+
+  <div
+    :if={@posts == []}
+    class="rounded-box border border-dashed border-base-300 p-10 text-center text-base-content/60"
+  >
+    No saved posts (yet). Run <code class="font-mono">mix reddit.ingest_saved</code>
+    to pull some in.
+  </div>
+
+  <ul
+    :if={@posts != []}
+    class="divide-y divide-base-300 rounded-box border border-base-300 bg-base-100"
+  >
+    <li :for={post <- @posts} class="flex items-start gap-3 p-4">
+      <input
+        type="checkbox"
+        checked={MapSet.member?(@selected_ids, post.id)}
+        phx-click="toggle_select"
+        phx-value-id={post.id}
+        class="checkbox checkbox-sm mt-1"
+      />
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <.link navigate={~p"/posts/#{post.id}"} class="font-semibold hover:underline">
+            {post.title}
+          </.link>
+          <span class="badge badge-ghost badge-sm">r/{post.subreddit}</span>
+          <span class="badge badge-outline badge-sm">{post.type}</span>
+        </div>
+
+        <div class="mt-2 flex flex-wrap items-center gap-1.5">
+          <span :for={tag <- @tags_by_post_id[post.id] || []} class="badge badge-primary badge-sm">
+            {tag.name}
+          </span>
+          <.form
+            for={%{}}
+            as={:tag}
+            id={"tag-form-#{post.id}"}
+            phx-submit="add_tag"
+            class="inline-flex items-center gap-1"
+          >
+            <input type="hidden" name="post_id" value={post.id} />
+            <input type="text" name="tag[name]" placeholder="add tag" class="input input-xs w-24" />
+            <button type="submit" class="btn btn-ghost btn-xs">Add</button>
+          </.form>
+        </div>
+      </div>
+    </li>
+  </ul>
+</Layouts.app>

@@ -12,7 +12,8 @@ defmodule RedditSavesManager.Application do
       RedditSavesManager.Repo,
       {Ecto.Migrator,
        repos: Application.fetch_env!(:reddit_saves_manager, :ecto_repos), skip: skip_migrations?()},
-      {DNSCluster, query: Application.get_env(:reddit_saves_manager, :dns_cluster_query) || :ignore},
+      {DNSCluster,
+       query: Application.get_env(:reddit_saves_manager, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: RedditSavesManager.PubSub},
       # Start a worker by calling: RedditSavesManager.Worker.start_link(arg)
       # {RedditSavesManager.Worker, arg},

@@ -1,7 +1,4 @@
 defmodule RedditSavesManager.SavesTest do
-  # async: false — Task 9 appends a test to this file that stubs Req via the
-  # shared :reddit_req_options Application env key (see the note in
-  # reddit/client_test.exs), so the whole file must run non-concurrently.
   use RedditSavesManager.DataCase, async: false
 
   alias RedditSavesManager.Saves
@@ -95,29 +92,11 @@ defmodule RedditSavesManager.SavesTest do
     assert found.title == "Notes on self-hosted deployments"
   end
 
-  test "unsave_posts/2 archives posts that succeed and reports failures" do
-    Application.put_env(:reddit_saves_manager, :reddit_req_options,
-      plug: {Req.Test, RedditSavesManager.Reddit.Client}
-    )
-
+  test "archive_posts/1 archives the given ids" do
     {:ok, post1} = Saves.upsert_saved_post(@valid_attrs)
     {:ok, post2} = Saves.upsert_saved_post(%{@valid_attrs | reddit_fullname: "t3_fail"})
 
-    Req.Test.stub(RedditSavesManager.Reddit.Client, fn conn ->
-      %{"id" => id} = conn |> Req.Test.raw_body() |> URI.decode_query()
-
-      if id == "t3_abc123" do
-        Plug.Conn.send_resp(conn, 200, "{}")
-      else
-        Plug.Conn.send_resp(conn, 500, "{}")
-      end
-    end)
-
-    assert {:ok, %{unsaved: unsaved, failed: failed}} =
-             Saves.unsave_posts("faketoken", [post1.id, post2.id])
-
-    assert post1.id in unsaved
-    assert post2.id in failed
+    assert {:ok, 1} = Saves.archive_posts([post1.id])
     assert Saves.list_active_posts() |> Enum.map(& &1.id) == [post2.id]
   end
 end

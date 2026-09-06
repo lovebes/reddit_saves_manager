@@ -1,7 +1,4 @@
 defmodule RedditSavesManagerWeb.PostsLiveIndexTest do
-  # async: false — the bulk-unsave test added in Task 9 stubs Req via the
-  # shared :reddit_req_options Application env key (see the note in
-  # reddit/client_test.exs).
   use RedditSavesManagerWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
   alias RedditSavesManager.Saves
@@ -25,17 +22,13 @@ defmodule RedditSavesManagerWeb.PostsLiveIndexTest do
     assert html =~ post.title
   end
 
-  test "renders a link to connect a Reddit account", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/posts")
-    assert html =~ ~s(href="/auth/reddit")
-  end
-
-  test "syncing with no Reddit token connected shows a flash message", %{conn: conn} do
+  test "refresh reloads the list from the DB", %{conn: conn, post: post} do
     {:ok, view, _html} = live(conn, ~p"/posts")
 
-    html = view |> element("button", "Sync now") |> render_click()
+    html = view |> element("button", "Refresh list") |> render_click()
 
-    assert html =~ "Connect your Reddit account first"
+    assert html =~ "Refreshed"
+    assert html =~ post.title
   end
 
   test "filters by subreddit", %{conn: conn} do
@@ -93,18 +86,7 @@ defmodule RedditSavesManagerWeb.PostsLiveIndexTest do
     assert html =~ "research"
   end
 
-  test "bulk unsave archives selected posts", %{conn: conn, post: post} do
-    Application.put_env(:reddit_saves_manager, :reddit_req_options,
-      plug: {Req.Test, RedditSavesManager.Reddit.Client}
-    )
-
-    Req.Test.stub(RedditSavesManager.Reddit.Client, fn conn ->
-      Plug.Conn.send_resp(conn, 200, "{}")
-    end)
-
-    future = DateTime.add(DateTime.utc_now(), 3600, :second) |> DateTime.truncate(:second)
-    {:ok, _} = RedditSavesManager.Reddit.save_token(%{access_token: "atok", refresh_token: "rtok", expires_at: future})
-
+  test "bulk unsave archives selected posts locally", %{conn: conn, post: post} do
     {:ok, view, _html} = live(conn, ~p"/posts")
 
     view |> element("input[phx-value-id='#{post.id}']") |> render_click()

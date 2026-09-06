@@ -20,9 +20,6 @@ defmodule RedditSavesManagerWeb.Router do
     get "/", PageController, :home
     get "/guide", PageController, :guide
 
-    get "/auth/reddit", AuthController, :new
-    get "/auth/reddit/callback", AuthController, :callback
-
     live "/posts", PostsLive.Index
     live "/posts/:id", PostsLive.Show
   end

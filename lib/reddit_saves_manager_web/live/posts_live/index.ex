@@ -2,8 +2,6 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
   use RedditSavesManagerWeb, :live_view
 
   alias RedditSavesManager.Saves
-  alias RedditSavesManager.Saves.Sync
-  alias RedditSavesManager.Reddit
 
   def mount(_params, _session, socket) do
     posts = Saves.list_active_posts()
@@ -37,30 +35,16 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
      )}
   end
 
-  def handle_event("sync", _params, socket) do
-    case Reddit.valid_access_token() do
-      {:ok, access_token} ->
-        # `username` is fetched once via Reddit's /api/v1/me in a follow-up
-        # if needed; for now this reads from application config set alongside
-        # the OAuth credentials, since it's your own single account.
-        username = Application.fetch_env!(:reddit_saves_manager, :reddit)[:username]
+  # Reloads the list from the DB. Syncing itself happens out-of-band via
+  # `mix reddit.ingest_saved` (Reddit denies the OAuth scopes an in-app
+  # sync would need) — this just picks up whatever that ingest wrote.
+  def handle_event("refresh", _params, socket) do
+    posts = Saves.list_active_posts(socket.assigns.filters)
 
-        case Sync.run(access_token, username) do
-          {:ok, %{synced: count}} ->
-            posts = Saves.list_active_posts(socket.assigns.filters)
-
-            {:noreply,
-             socket
-             |> put_flash(:info, "Synced #{count} posts")
-             |> assign(posts: posts, tags_by_post_id: tags_by_post_id(posts))}
-
-          {:error, reason} ->
-            {:noreply, put_flash(socket, :error, "Sync failed: #{inspect(reason)}")}
-        end
-
-      {:error, :not_authenticated} ->
-        {:noreply, put_flash(socket, :error, "Connect your Reddit account first")}
-    end
+    {:noreply,
+     socket
+     |> put_flash(:info, "Refreshed")
+     |> assign(posts: posts, tags_by_post_id: tags_by_post_id(posts))}
   end
 
   def handle_event("toggle_select", %{"id" => id}, socket) do
@@ -107,26 +91,17 @@ defmodule RedditSavesManagerWeb.PostsLive.Index do
      )}
   end
 
+  # Archives the selection locally only — it doesn't touch reddit.com. Actually
+  # removing a post from Reddit's own saved list is a separate action to ask
+  # for when you want it (Reddit denies the OAuth scope an in-app call
+  # would need, so it's done by driving a browser instead).
   def handle_event("bulk_unsave", _params, socket) do
-    case Reddit.valid_access_token() do
-      {:ok, access_token} ->
-        ids = MapSet.to_list(socket.assigns.selected_ids)
-        {:ok, %{unsaved: unsaved, failed: failed}} = Saves.unsave_posts(access_token, ids)
+    ids = MapSet.to_list(socket.assigns.selected_ids)
+    {:ok, count} = Saves.archive_posts(ids)
 
-        message =
-          if failed == [] do
-            "Unsaved #{length(unsaved)} posts"
-          else
-            "Unsaved #{length(unsaved)}, failed on #{length(failed)}"
-          end
-
-        {:noreply,
-         socket
-         |> put_flash(:info, message)
-         |> assign(posts: Saves.list_active_posts(socket.assigns.filters), selected_ids: MapSet.new())}
-
-      {:error, :not_authenticated} ->
-        {:noreply, put_flash(socket, :error, "Connect your Reddit account first")}
-    end
+    {:noreply,
+     socket
+     |> put_flash(:info, "Archived #{count} posts locally")
+     |> assign(posts: Saves.list_active_posts(socket.assigns.filters), selected_ids: MapSet.new())}
   end
 end

@@ -1,21 +1,16 @@
 defmodule RedditSavesManager.Research do
   alias RedditSavesManager.Repo
-  alias RedditSavesManager.Reddit
-  alias RedditSavesManager.Reddit.Client, as: RedditClient
   alias RedditSavesManager.Research.{Doc, OpenRouterClient}
 
-  def top_comments(comments, n) do
-    comments
-    |> Enum.sort_by(& &1.score, :desc)
-    |> Enum.take(n)
-  end
-
-  def build_prompt(post, comments) do
-    comments_text =
-      comments
-      |> Enum.map(fn c -> "- (score #{c.score}) #{c.author}: #{c.body}" end)
-      |> Enum.join("\n")
-
+  @doc """
+  Builds the research-doc prompt from a post and its raw, unstructured comment
+  text (a straight copy-paste off the permalink page — author names, bodies,
+  and reply nesting all jumbled together, not parsed into fields; vote scores
+  aren't part of the copyable page text at all, so they're never in here).
+  The model is instructed to do that parsing/cleanup itself as part of writing
+  the doc, rather than this code sorting comments by a structured score first.
+  """
+  def build_prompt(post, comments_raw, comment_count) do
     """
     You are producing a clean, well-structured markdown research document from a Reddit thread.
 
@@ -26,21 +21,31 @@ defmodule RedditSavesManager.Research do
     Post body:
     #{post.selftext}
 
-    Top comments (sorted by score):
-    #{comments_text}
+    Raw comment section (unstructured — copied straight off the page, so it
+    includes author names, comment bodies, and UI noise like "Reply"/"Share"
+    all mixed together; figure out the structure yourself). Comments appear in
+    Reddit's default "Best" sort order, so earlier ones in this text are
+    generally higher-scored than later ones — there are no explicit vote
+    numbers in this copy:
+    #{comments_raw}
 
     Write a markdown document that summarizes the key insights, points of debate, and
-    actionable takeaways from this thread. Use headers and bullet points. Synthesize
+    actionable takeaways from this thread. Focus mainly on roughly the top #{comment_count}
+    comments by that position in the sort order, treating later ones as
+    lower-priority supporting context. Use headers and bullet points. Synthesize
     the comments rather than repeating them verbatim.
     """
   end
 
-  def generate_and_save(post, comment_count) do
-    with {:ok, access_token} <- Reddit.valid_access_token(),
-         post_id36 <- post.reddit_fullname |> String.split("_", parts: 2) |> List.last(),
-         {:ok, comments} <- RedditClient.fetch_comments(access_token, post.subreddit, post_id36),
-         top <- top_comments(comments, comment_count),
-         prompt <- build_prompt(post, top),
+  @doc """
+  Generates and saves a research doc from a post and its raw comment-section text.
+
+  `comments_raw` is supplied by the caller (a browser scrape/copy-paste pulls
+  it — Reddit's API denies the OAuth scopes this app would need), not fetched
+  here, and is not parsed into structured fields; the model does that.
+  """
+  def generate_and_save(post, comments_raw, comment_count) do
+    with prompt <- build_prompt(post, comments_raw, comment_count),
          {:ok, markdown} <- OpenRouterClient.generate(prompt),
          {:ok, file_path} <- write_doc_file(post, markdown) do
       %Doc{}
