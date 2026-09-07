@@ -1,4 +1,6 @@
 defmodule RedditSavesManager.Research do
+  import Ecto.Query
+
   alias RedditSavesManager.Repo
   alias RedditSavesManager.Research.{Doc, OpenRouterClient}
 
@@ -56,9 +58,43 @@ defmodule RedditSavesManager.Research do
         model: OpenRouterClient.model(),
         generated_at: DateTime.utc_now() |> DateTime.truncate(:second)
       })
-      |> Repo.insert()
+      |> Repo.insert(
+        on_conflict: {:replace_all_except, [:id, :inserted_at]},
+        conflict_target: :saved_post_id,
+        returning: true
+      )
     end
   end
+
+  @doc "Most recently generated research doc for a post, if any."
+  def latest_doc(saved_post_id) do
+    Doc
+    |> where(saved_post_id: ^saved_post_id)
+    |> order_by(desc: :generated_at)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  @doc "Reads a doc's markdown file off disk; nil if it's missing or unreadable."
+  def read_doc_content(%Doc{file_path: path}) do
+    case File.read(path) do
+      {:ok, content} -> content
+      {:error, _reason} -> nil
+    end
+  end
+
+  @doc "Renders markdown (the doc content, YAML frontmatter and all) to HTML for display."
+  def to_html(nil), do: nil
+  def to_html(markdown), do: markdown |> strip_frontmatter() |> Earmark.as_html!()
+
+  defp strip_frontmatter("---\n" <> rest) do
+    case String.split(rest, "\n---\n", parts: 2) do
+      [_frontmatter, body] -> body
+      [body] -> body
+    end
+  end
+
+  defp strip_frontmatter(markdown), do: markdown
 
   # Max length of the title-derived portion of the slug, before the
   # `-#{post.id}` uniqueness suffix is appended. Keeps the final filename

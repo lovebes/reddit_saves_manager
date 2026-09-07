@@ -63,4 +63,30 @@
       </.form>
     </div>
   </div>
+
+  <div :if={@doc} class="card mt-6 border border-base-300 bg-base-100">
+    <div class="card-body">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="card-title text-base">Generated research doc</h2>
+        <span class="text-xs opacity-60">
+          {@doc.model} · top {@doc.comment_count_used} comments · {@doc.generated_at}
+        </span>
+      </div>
+      <.link
+        href={~p"/posts/#{@post.id}/research_doc"}
+        target="_blank"
+        rel="noopener"
+        class="link link-hover font-mono text-xs opacity-60"
+      >
+        {@doc.file_path}
+      </.link>
+      <div
+        :if={@doc_html}
+        class="prose prose-sm dark:prose-invert max-w-none rounded-box border border-base-300 bg-base-200 p-4"
+      >
+        {raw(@doc_html)}
+      </div>
+      <p :if={!@doc_html} class="text-sm opacity-60">(file not found on disk)</p>
+    </div>
+  </div>
 </Layouts.app>

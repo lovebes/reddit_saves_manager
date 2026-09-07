@@ -22,6 +22,7 @@ defmodule RedditSavesManagerWeb.Router do
 
     live "/posts", PostsLive.Index
     live "/posts/:id", PostsLive.Show
+    get "/posts/:post_id/research_doc", ResearchDocController, :show
   end
 
   # Other scopes may use custom stacks.

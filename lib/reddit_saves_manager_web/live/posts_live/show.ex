@@ -6,7 +6,9 @@ defmodule RedditSavesManagerWeb.PostsLive.Show do
 
   def mount(%{"id" => id}, _session, socket) do
     post = Saves.get_saved_post!(id)
-    {:ok, assign(socket, post: post)}
+    doc = Research.latest_doc(post.id)
+    doc_html = doc && doc |> Research.read_doc_content() |> Research.to_html()
+    {:ok, assign(socket, post: post, doc: doc, doc_html: doc_html)}
   end
 
   def handle_event(
@@ -18,7 +20,12 @@ defmodule RedditSavesManagerWeb.PostsLive.Show do
 
     case Research.generate_and_save(socket.assigns.post, comments_raw, comment_count) do
       {:ok, doc} ->
-        {:noreply, put_flash(socket, :info, "Research doc generated: #{doc.file_path}")}
+        doc_html = doc |> Research.read_doc_content() |> Research.to_html()
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Research doc generated: #{doc.file_path}")
+         |> assign(doc: doc, doc_html: doc_html)}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Doc generation failed: #{inspect(reason)}")}
